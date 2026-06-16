@@ -890,31 +890,61 @@ export default function App() {
               )}
 
               {authError && (
-                <div className="bg-red-950/30 p-4 rounded-xl border border-red-900/45 text-left space-y-2">
+                <div className="bg-red-950/30 p-4 rounded-xl border border-red-900/45 text-left space-y-3">
                   <div className="flex gap-2.5 items-start">
-                    <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                    <div>
-                      <h4 className="text-[11px] font-bold text-red-400">Verificación de Emergencia Requerida</h4>
-                      <p className="text-[11px] text-slate-300 leading-relaxed mt-1">
-                        La ventana de autenticación fue cerrada o bloqueada por la política de seguridad del navegador para marcos incrustados.
+                    <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                      <h4 className="text-[12px] font-bold text-red-400">
+                        {authError === "UNAUTHORIZED_DOMAIN" 
+                          ? "Dominio No Autorizado en Firebase" 
+                          : "Error de Verificación Requerida"}
+                      </h4>
+                      <p className="text-[11px] text-slate-300 leading-relaxed">
+                        {authError === "UNAUTHORIZED_DOMAIN" ? (
+                          <>
+                            Tu dominio de GitHub Pages <code className="bg-slate-900 text-amber-400 px-1 py-0.5 rounded font-mono text-[10px]">caronte12715.github.io</code> no está autorizado en tu consola de Firebase Auth.
+                          </>
+                        ) : authError === "POPUP_CLOSED_OR_BLOCKED" ? (
+                          "La ventana de autenticación fue cerrada o bloqueada por la política de seguridad del navegador o un bloqueador de ventanas emergentes (popup blocker)."
+                        ) : (
+                          `Detalle del error: ${authError}`
+                        )}
                       </p>
                     </div>
                   </div>
-                  <div className="pt-1">
-                    <button
-                      onClick={() => {
-                        try {
-                          window.open(window.location.href, "_blank");
-                        } catch (e) {
-                          console.error(e);
-                        }
-                      }}
-                      className="w-full bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-705/80 hover:text-white transition-colors duration-150 py-1.5 px-3 rounded-lg text-[10px] font-semibold flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      Arreglar abriendo en Pestaña Nueva
-                    </button>
-                  </div>
+
+                  {authError === "UNAUTHORIZED_DOMAIN" && (
+                    <div className="bg-slate-950/80 border border-slate-800/80 rounded-lg p-3 text-[11px] text-slate-400 space-y-2 mt-2 leading-normal">
+                      <p className="font-semibold text-slate-300">Solución rápida en Firebase Console (1 Minuto):</p>
+                      <ol className="list-decimal list-inside space-y-1.5 pl-1">
+                        <li>Abre tu consola de <a href="https://console.firebase.google.com/" target="_blank" rel="noreferrer" className="text-amber-400 hover:underline">Firebase Console ↗</a>.</li>
+                        <li>Entra a la sección de <strong className="text-slate-300">Authentication</strong> (Menú lateral izquierdo).</li>
+                        <li>Haz clic en la pestaña de <strong className="text-slate-300">Settings</strong> (Configuración) arriba.</li>
+                        <li>En la barra izquierda de opciones, selecciona <strong className="text-slate-300">Authorized domains</strong> (Dominios autorizados).</li>
+                        <li>Haz clic en el botón <strong className="text-slate-300">Add domain</strong> (Añadir dominio).</li>
+                        <li>Escribe exactamente: <code className="bg-slate-900 text-white px-1 py-0.5 rounded font-mono select-all font-bold">caronte12715.github.io</code></li>
+                        <li>Presiona <strong className="text-slate-300">Add</strong> para guardar. ¡Y listo! Recarga esta página e intenta iniciar sesión nuevamente.</li>
+                      </ol>
+                    </div>
+                  )}
+
+                  {authError === "POPUP_CLOSED_OR_BLOCKED" && (
+                    <div className="pt-1">
+                      <button
+                        onClick={() => {
+                          try {
+                            window.open(window.location.href, "_blank");
+                          } catch (e) {
+                            console.error(e);
+                          }
+                        }}
+                        className="w-full bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700/80 hover:text-white transition-colors duration-150 py-1.5 px-3 rounded-lg text-[10px] font-semibold flex items-center justify-center gap-2 cursor-pointer pointer-events-auto"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        Reintentar en Pestaña Nueva
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -926,9 +956,10 @@ export default function App() {
                       await signInWithPopup(auth, googleProvider);
                     } catch (err: any) {
                       console.error("Error signing in:", err);
-                      // Set detailed state error
                       const errMsg = err?.message || String(err);
-                      if (errMsg.includes("popup-closed-by-user") || errMsg.includes("cancelled-popup-request")) {
+                      if (errMsg.includes("unauthorized-domain") || errMsg.includes("unauthorized_domain") || errMsg.includes("unauthorized domain") || err?.code === "auth/unauthorized-domain") {
+                        setAuthError("UNAUTHORIZED_DOMAIN");
+                      } else if (errMsg.includes("popup-closed-by-user") || errMsg.includes("cancelled-popup-request")) {
                         setAuthError("POPUP_CLOSED_OR_BLOCKED");
                       } else {
                         setAuthError(errMsg);
