@@ -139,6 +139,7 @@ export default function App() {
   const [newStudentBelt, setNewStudentBelt] = useState<Belt>(Belt.Participante);
   const [newStudentPhone, setNewStudentPhone] = useState("");
   const [newStudentNotes, setNewStudentNotes] = useState("");
+  const [registrationError, setRegistrationError] = useState<string | null>(null);
 
   // Edit Student Draft State (controlled)
   const [editName, setEditName] = useState("");
@@ -259,6 +260,11 @@ export default function App() {
     return unsubscribeAuth;
   }, []);
 
+  // Clear errors when changing tab or opening/closing modal
+  useEffect(() => {
+    setRegistrationError(null);
+  }, [activeTab, isAddModalOpen]);
+
   // Sync with Firestore collections in real-time when authenticated and authorized
   useEffect(() => {
     if (!user || !isAuthorized) {
@@ -364,9 +370,10 @@ export default function App() {
   // ----------------------------------------------------
   // ENROLLMENT (MATRÍCULA) ACTIONS
   // ----------------------------------------------------
-  const handleAddStudent = async (e: React.FormEvent) => {
+  const handleAddStudent = async (e: React.FormEvent): Promise<boolean> => {
     e.preventDefault();
-    if (!newStudentName.trim()) return;
+    if (!newStudentName.trim()) return false;
+    setRegistrationError(null);
 
     const studentId = `stu-${Date.now()}`;
     const studentToAdd: Student = {
@@ -393,8 +400,22 @@ export default function App() {
       setNewStudentBelt(Belt.Participante);
       setNewStudentPhone("");
       setNewStudentNotes("");
-    } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, `students/${studentId}`);
+      setRegistrationError(null);
+      return true;
+    } catch (err: any) {
+      console.error("Error creating student:", err);
+      const errMsg = err?.message || String(err);
+      if (errMsg.includes("permission-denied") || errMsg.includes("permission_denied") || errMsg.includes("Permission denied") || err?.code === "permission-denied" || err?.code === "auth/permission-denied") {
+        setRegistrationError("Error de Permisos: Tu cuenta no tiene permisos para escribir en la base de datos de Firebase. Contacta al administrador para que otorgue acceso a " + (auth.currentUser?.email || "tu correo"));
+      } else {
+        setRegistrationError(`No se pudo matricular: ${errMsg}`);
+      }
+      try {
+        handleFirestoreError(err, OperationType.CREATE, `students/${studentId}`);
+      } catch (logErr) {
+        // structural logging
+      }
+      return false;
     }
   };
 
@@ -2428,13 +2449,20 @@ export default function App() {
                   </div>
 
                   <form
-                    onSubmit={(e) => {
+                    onSubmit={async (e) => {
                       e.preventDefault();
-                      handleAddStudent(e);
-                      alert("¡Matrícula guardada exitosamente y carnet emitido!");
+                      const ok = await handleAddStudent(e);
+                      if (ok) {
+                        alert("¡Matrícula guardada exitosamente y carnet emitido!");
+                      }
                     }}
                     className="space-y-4 text-xs"
                   >
+                    {registrationError && (
+                      <div className="bg-red-50 text-red-700 p-3 rounded-xl border border-red-200 text-xs font-semibold leading-normal">
+                        {registrationError}
+                      </div>
+                    )}
                     <div className="space-y-1">
                       <label className="font-bold text-slate-700 block">Nombre Completo *</label>
                       <input
@@ -3113,6 +3141,12 @@ export default function App() {
               </div>
 
               <form onSubmit={handleAddStudent} className="space-y-4 text-xs">
+                
+                {registrationError && (
+                  <div className="bg-red-50 text-red-700 p-3 rounded-xl border border-red-200 text-xs font-semibold leading-normal">
+                    {registrationError}
+                  </div>
+                )}
                 
                 {/* Name */}
                 <div className="space-y-1">
