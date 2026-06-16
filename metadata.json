@@ -1,0 +1,6 @@
+{
+  "name": "Karate School Manager",
+  "description": "Enrollment, progress tracking, and attendance management by age group for Karate dojos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

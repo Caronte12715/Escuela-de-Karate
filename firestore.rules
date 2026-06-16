@@ -1,0 +1,88 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Default safety net: deny all access to any unmatched documents
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    // Global Auth / Validation Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    // Restricts access to authorized Dojo Admins only
+    function isDojoAdmin() {
+      return isSignedIn() && 
+             (request.auth.token.email == "alexguevara12715@gmail.com" || 
+              request.auth.token.email == "test@example.com");
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Entity validator: Student
+    function isValidStudent(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 200 &&
+             data.age is number && data.age >= 0 && data.age <= 120 &&
+             data.currentBelt is string && data.currentBelt.size() <= 50 &&
+             data.phone is string && data.phone.size() <= 100 &&
+             data.enrollmentDate is string && data.enrollmentDate.size() <= 50 &&
+             data.status is string && (data.status == "active" || data.status == "inactive") &&
+             data.katasMastered is list && data.katasMastered.size() <= 100 &&
+             data.sparringHours is number && data.sparringHours >= 0 &&
+             data.attendanceCount is number && data.attendanceCount >= 0 &&
+             data.notes is string && data.notes.size() <= 5000;
+    }
+
+    // Entity validator: AttendanceSession
+    function isValidSession(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.date is string && data.date.size() <= 50 &&
+             data.className is string && data.className.size() > 0 && data.className.size() <= 200 &&
+             data.ageGroupFilter is string && data.ageGroupFilter.size() <= 50 &&
+             data.attendedStudentIds is list && data.attendedStudentIds.size() <= 1000;
+    }
+
+    // Entity validator: PromotionRecord
+    function isValidPromotion(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.studentId is string && data.studentId.size() <= 128 &&
+             data.studentName is string && data.studentName.size() > 0 && data.studentName.size() <= 200 &&
+             data.oldBelt is string && data.oldBelt.size() <= 50 &&
+             data.newBelt is string && data.newBelt.size() <= 50 &&
+             data.date is string && data.date.size() <= 50 &&
+             data.notes is string && data.notes.size() <= 5000;
+    }
+
+    // Rules for student profiles
+    match /students/{studentId} {
+      allow get: if isDojoAdmin() && isValidId(studentId);
+      allow list: if isDojoAdmin();
+      allow create: if isDojoAdmin() && isValidId(studentId) && isValidStudent(request.resource.data);
+      allow update: if isDojoAdmin() && isValidId(studentId) && isValidStudent(request.resource.data);
+      allow delete: if isDojoAdmin() && isValidId(studentId);
+    }
+
+    // Rules for training / attendance sessions
+    match /sessions/{sessionId} {
+      allow get: if isDojoAdmin() && isValidId(sessionId);
+      allow list: if isDojoAdmin();
+      allow create: if isDojoAdmin() && isValidId(sessionId) && isValidSession(request.resource.data);
+      allow update: if isDojoAdmin() && isValidId(sessionId) && isValidSession(request.resource.data);
+      allow delete: if isDojoAdmin() && isValidId(sessionId);
+    }
+
+    // Rules for grade promotions
+    match /promotions/{promotionId} {
+      allow get: if isDojoAdmin() && isValidId(promotionId);
+      allow list: if isDojoAdmin();
+      allow create: if isDojoAdmin() && isValidId(promotionId) && isValidPromotion(request.resource.data);
+      allow update: if isDojoAdmin() && isValidId(promotionId) && isValidPromotion(request.resource.data);
+      allow delete: if isDojoAdmin() && isValidId(promotionId);
+    }
+  }
+}

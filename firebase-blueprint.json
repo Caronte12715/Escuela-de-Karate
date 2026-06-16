@@ -1,0 +1,134 @@
+{
+  "entities": {
+    "Student": {
+      "title": "Student",
+      "description": "A student registered in the Kyudai Kai Dojo",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique student identifier"
+        },
+        "name": {
+          "type": "string",
+          "description": "Full name of the student"
+        },
+        "age": {
+          "type": "number",
+          "description": "Age of the student"
+        },
+        "currentBelt": {
+          "type": "string",
+          "description": "Current belt level"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Emergency contact numbers"
+        },
+        "enrollmentDate": {
+          "type": "string",
+          "description": "Date enrolled in Dojo"
+        },
+        "status": {
+          "type": "string",
+          "description": "Active or inactive status"
+        },
+        "katasMastered": {
+          "type": "array",
+          "description": "List of technical katas successfully mastered"
+        },
+        "sparringHours": {
+          "type": "number",
+          "description": "Hours spent on Kumite/Sparring"
+        },
+        "attendanceCount": {
+          "type": "number",
+          "description": "Aggregated attendance count"
+        },
+        "notes": {
+          "type": "string",
+          "description": "General instructor remarks"
+        }
+      },
+      "required": ["id", "name", "age", "currentBelt", "status"]
+    },
+    "AttendanceSession": {
+      "title": "AttendanceSession",
+      "description": "An attendance taking session for a specific class",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique session identifier"
+        },
+        "date": {
+          "type": "string",
+          "description": "Date of class session"
+        },
+        "className": {
+          "type": "string",
+          "description": "Name or topic of the class"
+        },
+        "ageGroupFilter": {
+          "type": "string",
+          "description": "Age group filter targeted"
+        },
+        "attendedStudentIds": {
+          "type": "array",
+          "description": "Array of student IDs who are present"
+        }
+      },
+      "required": ["id", "date", "className", "ageGroupFilter", "attendedStudentIds"]
+    },
+    "PromotionRecord": {
+      "title": "PromotionRecord",
+      "description": "A rank promotion or belt upgrade record",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique promotion ID"
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Target student identifier"
+        },
+        "studentName": {
+          "type": "string",
+          "description": "Student full name cached during creation"
+        },
+        "oldBelt": {
+          "type": "string",
+          "description": "Previous belt level"
+        },
+        "newBelt": {
+          "type": "string",
+          "description": "Newly awarded belt level"
+        },
+        "date": {
+          "type": "string",
+          "description": "Date of promotion test or event"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Evaluator details or grading notes"
+        }
+      },
+      "required": ["id", "studentId", "studentName", "oldBelt", "newBelt", "date"]
+    }
+  },
+  "firestore": {
+    "students": {
+      "schema": "Student",
+      "description": "Collection storing student information and registration profiles"
+    },
+    "sessions": {
+      "schema": "AttendanceSession",
+      "description": "Collection tracking each training session's attendance list"
+    },
+    "promotions": {
+      "schema": "PromotionRecord",
+      "description": "Collection logging all historical belt promotions"
+    }
+  }
+}
