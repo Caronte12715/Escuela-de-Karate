@@ -141,6 +141,7 @@ export default function App() {
   const [newStudentNotes, setNewStudentNotes] = useState("");
   const [registrationError, setRegistrationError] = useState<string | null>(null);
   const [isSavingStudent, setIsSavingStudent] = useState(false);
+  const [isCleaningDuplicates, setIsCleaningDuplicates] = useState(false);
 
   // Edit Student Draft State (controlled)
   const [editName, setEditName] = useState("");
@@ -421,6 +422,54 @@ export default function App() {
       return false;
     } finally {
       setIsSavingStudent(false);
+    }
+  };
+
+  const handleCleanDuplicates = async () => {
+    const nameCounts: { [normalized: string]: { originalName: string; ids: string[] } } = {};
+    students.forEach((student) => {
+      const normalized = student.name.trim().toLowerCase();
+      if (!normalized) return;
+      if (!nameCounts[normalized]) {
+        nameCounts[normalized] = { originalName: student.name.trim(), ids: [] };
+      }
+      nameCounts[normalized].ids.push(student.id);
+    });
+
+    const dupGroups = Object.values(nameCounts).filter((g) => g.ids.length > 1);
+    if (dupGroups.length === 0) {
+      alert("No se encontraron alumnos con el mismo nombre en la lista actual.");
+      return;
+    }
+
+    const totalToDelete = dupGroups.reduce((acc, curr) => acc + (curr.ids.length - 1), 0);
+    const detailList = dupGroups.map((g) => `• ${g.originalName}: tiene ${g.ids.length} registros (se conservará 1 y se borrarán ${g.ids.length - 1})`).join("\n");
+
+    const userConfirmed = window.confirm(
+      `Se han detectado registros repetidos de alumnos en la base de datos:\n\n${detailList}\n\n¿Desea depurar estos registros eliminando ${totalToDelete} duplicados y conservando un único registro activo para cada uno?`
+    );
+
+    if (!userConfirmed) return;
+
+    setIsCleaningDuplicates(true);
+    let deletedCount = 0;
+
+    try {
+      for (const group of dupGroups) {
+        // Sort IDs to keep the oldest one (e.g. smaller timestamp)
+        const sortedIds = [...group.ids].sort();
+        const toDeleteIds = sortedIds.slice(1);
+        
+        for (const id of toDeleteIds) {
+          await deleteDoc(doc(db, "students", id));
+          deletedCount++;
+        }
+      }
+      alert(`¡Limpieza exitosa! Se eliminaron ${deletedCount} registros duplicados de la base de datos.`);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, "students/bulk-duplicates");
+    } finally {
+      setIsCleaningDuplicates(false);
     }
   };
 
@@ -1620,6 +1669,47 @@ export default function App() {
                   <span className="text-slate-400 font-mono ml-auto">Encontrados: {filteredStudents.length}</span>
                 </div>
               )}
+
+              {/* DUPLICATE WARNING / CLEANUP BANNER */}
+              {(() => {
+                const nameCounts: { [normalized: string]: { originalName: string; count: number } } = {};
+                students.forEach((student) => {
+                  const normalized = student.name.trim().toLowerCase();
+                  if (!normalized) return;
+                  if (!nameCounts[normalized]) {
+                    nameCounts[normalized] = { originalName: student.name.trim(), count: 0 };
+                  }
+                  nameCounts[normalized].count++;
+                });
+                const groups = Object.values(nameCounts).filter((g) => g.count > 1);
+                if (groups.length === 0) return null;
+
+                return (
+                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xs">
+                    <div className="flex gap-3">
+                      <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <h4 className="font-bold text-amber-800 text-sm">Se detectaron practicantes duplicados</h4>
+                        <p className="text-slate-600 text-xs mt-1 leading-relaxed">
+                          Los siguientes alumnos tienen múltiples registros con el mismo nombre exacto:{" "}
+                          <span className="font-semibold text-slate-800">
+                            {groups.map((g) => `${g.originalName} (${g.count} veces)`).join(", ")}
+                          </span>
+                          . Haz clic en el botón de la derecha para depurar los registros duplicados y conservar un solo registro activo.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleCleanDuplicates}
+                      disabled={isCleaningDuplicates}
+                      className="bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5 transition-all self-stretch md:self-auto justify-center shrink-0"
+                    >
+                      <RotateCcw className={`w-3.5 h-3.5 text-white ${isCleaningDuplicates ? "animate-spin" : ""}`} />
+                      <span>{isCleaningDuplicates ? "Depurando..." : "Eliminar Duplicados"}</span>
+                    </button>
+                  </div>
+                );
+              })()}
 
               {/* STUDENTS DIRECTORY GRID */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
