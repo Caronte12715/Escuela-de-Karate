@@ -140,6 +140,7 @@ export default function App() {
   const [newStudentPhone, setNewStudentPhone] = useState("");
   const [newStudentNotes, setNewStudentNotes] = useState("");
   const [registrationError, setRegistrationError] = useState<string | null>(null);
+  const [isSavingStudent, setIsSavingStudent] = useState(false);
 
   // Edit Student Draft State (controlled)
   const [editName, setEditName] = useState("");
@@ -372,8 +373,10 @@ export default function App() {
   // ----------------------------------------------------
   const handleAddStudent = async (e: React.FormEvent): Promise<boolean> => {
     e.preventDefault();
+    if (isSavingStudent) return false;
     if (!newStudentName.trim()) return false;
     setRegistrationError(null);
+    setIsSavingStudent(true);
 
     const studentId = `stu-${Date.now()}`;
     const studentToAdd: Student = {
@@ -416,6 +419,8 @@ export default function App() {
         // structural logging
       }
       return false;
+    } finally {
+      setIsSavingStudent(false);
     }
   };
 
@@ -2530,10 +2535,11 @@ export default function App() {
                     <div className="pt-2">
                       <button
                         type="submit"
-                        className="w-full bg-slate-950 hover:bg-slate-850 text-white font-bold py-3 rounded-xl tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2"
+                        disabled={isSavingStudent}
+                        className="w-full bg-slate-950 hover:bg-slate-850 text-white font-bold py-3 rounded-xl tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                       >
                         <Save className="w-4 h-4 text-white" />
-                        <span>Confirmar Matrícula y Guardar</span>
+                        <span>{isSavingStudent ? "Matriculando..." : "Confirmar Matrícula y Guardar"}</span>
                       </button>
                     </div>
                   </form>
@@ -3220,16 +3226,18 @@ export default function App() {
                 <div className="flex gap-3 pt-2">
                   <button
                     type="button"
+                    disabled={isSavingStudent}
                     onClick={() => setIsAddModalOpen(false)}
-                    className="flex-grow bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 rounded-xl text-center cursor-pointer"
+                    className="flex-grow bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 rounded-xl text-center disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
-                    className="flex-grow bg-slate-950 hover:bg-slate-850 text-white font-semibold py-2 rounded-xl text-center cursor-pointer"
+                    disabled={isSavingStudent}
+                    className="flex-grow bg-slate-950 hover:bg-slate-850 text-white font-semibold py-2 rounded-xl text-center disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
-                    Confirmar Matrícula
+                    {isSavingStudent ? "Matriculando..." : "Confirmar Matrícula"}
                   </button>
                 </div>
 
